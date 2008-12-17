@@ -23,7 +23,7 @@ module Kontrol
     end
 
     def strip_tags(str)
-      str.gsub(/<\/?[^>]*>/, "")
+      str.to_s.gsub(/<\/?[^>]*>/, "")
     end
 
     def urlify(string)

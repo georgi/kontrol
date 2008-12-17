@@ -4,7 +4,6 @@ require 'erb'
 require 'yaml'
 require 'logger'
 require 'git_store'
-require 'mime/types'
 
 require 'kontrol/helpers'
 require 'kontrol/template'

@@ -52,7 +52,7 @@ module Kontrol
     def check_reload
       commit = store.repo.commits('master', 1)[0]
 
-      if last_commit.nil? or last_commit.id != commit.id
+      if commit and (last_commit.nil? or last_commit.id != commit.id)
         @last_commit = commit
         @last_mtime = last_commit.committed_date
         @mtime = {}

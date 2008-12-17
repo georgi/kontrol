@@ -57,16 +57,20 @@ module Kontrol
         singleton.send(:define_method, name, &proc)
       end
       obj.method(name)
-    end    
+    end
 
     def map_method(method, pattern = '.*', options = {}, &block)
+      on(pattern, options.merge(:method => method.to_s.upcase), &block)
+    end
+
+    def on(pattern = '.*', options = {}, &block)
       wrap = lambda do |env|
         env['kontrol.app'] or raise "no kontrol.app given"
         meth = method_from_proc(env['kontrol.app'], block)
         body = meth.call(*env['kontrol.args'])
         [200, {}, body]
       end
-      @router.map(pattern, wrap, options.merge(:method => method.to_s.upcase))
+      @router.map(pattern, wrap, options)
     end
 
   end  
