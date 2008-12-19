@@ -8,7 +8,6 @@ Gem::Specification.new do |s|
   s.homepage = 'http://github.com/georgi/kontrol'  
   s.description = "A small web framework running as rack application."
   s.require_path = 'lib'
-  s.add_dependency 'git_store'
   s.has_rdoc = true
   s.extra_rdoc_files = ['README.md']  
   s.files = %w{
