@@ -40,12 +40,12 @@ work with [GitStore][1].
 A Kontrol application is a class, which provides some context to the
 defined actions. You will probably use these methods:
 
-  * request: the Rack request object
-  * response: the Rack response object
-  * params: union of GET and POST parameters
-  * cookies: shortcut to request.cookies
-  * session: shortcut to `request.env['rack.session']`
-  * redirect(path): renders a redirect response to specified path
+* request: the Rack request object
+* response: the Rack response object
+* params: union of GET and POST parameters
+* cookies: shortcut to request.cookies
+* session: shortcut to `request.env['rack.session']`
+* redirect(path): renders a redirect response to specified path
 
 
 ## Routing
