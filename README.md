@@ -203,7 +203,6 @@ Add all these files to your repo:
 
     git init
     git add pages/index.md
-    git add git_app.ru
     git commit -m 'init'
 
 Run the app:
