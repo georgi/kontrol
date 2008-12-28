@@ -3,7 +3,8 @@ require 'rack'
 require 'erb'
 require 'yaml'
 require 'logger'
-require 'git_store'
+
+begin; require 'git_store'; rescue LoadError; end
 
 require 'kontrol/helpers'
 require 'kontrol/template'

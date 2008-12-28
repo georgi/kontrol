@@ -18,7 +18,7 @@ module Kontrol
 
     config_reader 'assets.yml', :javascript_files, :stylesheet_files
 
-    def initialize(options = {}, &block)
+    def initialize(options = {})
       options.each do |k, v|
         send "#{k}=", v
       end
@@ -26,11 +26,14 @@ module Kontrol
       @mtime = {}
       @last_mtime = Time.now
       @path = File.expand_path('.')
-      
+
+      initialize_repo if defined?(GitStore)
+    end
+
+    def initialize_repo      
       @store = GitStore.new(path)
       @store.load
-      
-      map(&block) if block
+    rescue Grit::InvalidGitRepositoryError      
     end
 
     def assets
@@ -77,14 +80,14 @@ module Kontrol
       end
     end
 
-    def camelize(str)
-      str.gsub(/\/(.?)/) { "::" + $1.upcase }.gsub(/(^|_)(.)/) { $2.upcase }
-    end
-
     # Render template with given variables.
     def render_template(file, vars)
-      templates[file] or raise "template #{file} not found"
-      Template.render(templates[file], self, file, vars)
+      if store
+        template = templates[file] or raise "template #{file} not found"
+      else
+        template = ERB.new(File.read("#{path}/templates/#{file}"))
+      end
+      Template.render(template, self, file, vars)
     end
 
     def render_layout(vars)
@@ -154,21 +157,35 @@ module Kontrol
       MIME_TYPES[ext] || 'text/html'
     end
 
-    def map(&block)
-      @map = Builder.new(&block)
+    class << self
+
+      def map(&block)
+        @map = Builder.new(&block)
+      end
+
+      def get_map
+        @map
+      end
+      
+    end
+
+    def find_map
+      if store and store['map.rb']
+        store['map.rb']
+      else
+        self.class.get_map
+      end
     end
 
     def call(env)
       Thread.current['request'] = Rack::Request.new(env)
       Thread.current['response'] = Rack::Response.new([], nil, { 'Content-Type' => '' })
 
-      check_reload
+      check_reload if store
       
       env['kontrol.app'] = self
 
-      map = @map || store['map.rb'] or raise "no map defined"
-
-      status, header, body = map.call(env)
+      status, header, body = find_map.call(env)
 
       response.status = status if response.status.nil?
       response.header.merge!(header)
