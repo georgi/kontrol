@@ -1,92 +1,40 @@
+require 'digest/sha1'
+
 module Kontrol
 
   class Application
 
+    class << self
+      def map(&block)
+        @map = Builder.new(&block)
+      end
+
+      def call(env)
+        @map.call(env)
+      end     
+    end
+    
     include Helpers
 
-    class << self
+    attr_reader :path, :store
 
-      def config_reader(file, *names)
-        names.each do |name|
-          name = name.to_s        
-          define_method(name) { config[file][name] }
-        end
+    def initialize(path)
+      @path = path
+      
+      if File.directory?(File.join(path, '.git')) && ENV['RACK_ENV'] == 'production'
+        @store = GitStore.new(path)
+      else
+        @store = GitStore::FileStore.new(path)
       end
-    end
-
-    attr_reader :path, :store, :last_commit
-
-    config_reader 'assets.yml', :javascript_files, :stylesheet_files
-
-    def initialize(options = {})
-      options.each do |k, v|
-        send "#{k}=", v
-      end
-
-      @mtime = {}
-      @last_mtime = Time.now
-      @path = File.expand_path('.')
-
-      initialize_repo if defined?(GitStore)
-    end
-
-    def initialize_repo      
-      @store = GitStore.new(path)
-      @store.load
-    rescue Grit::InvalidGitRepositoryError      
-    end
-
-    def assets
-      store['assets'] ||= GitStore::Tree.new
-    end
-
-    def config
-      store['config'] ||= GitStore::Tree.new
     end
 
     def templates
-      store['templates'] ||= GitStore::Tree.new
+      store['templates']
     end
     
-    def repo
-      @store.repo
-    end
-
-    def check_reload
-      commit = store.repo.commits('master', 1)[0]
-
-      if commit and (last_commit.nil? or last_commit.id != commit.id)
-        @last_commit = commit
-        @last_mtime = last_commit.committed_date
-        @mtime = {}
-        store.load        
-        load_store_from_disk
-      elsif ENV['RACK_ENV'] != 'production'
-        load_store_from_disk 
-      end
-    end
-
-    def load_store_from_disk
-      store.each_with_path do |blob, path|
-        path = "#{self.path}/#{path}"
-        if File.exist?(path)
-          mtime = File.mtime(path)
-          if mtime != @mtime[path]
-            @mtime[path] = mtime
-            @last_mtime = mtime if mtime > @last_mtime
-            blob.load(File.read(path))
-          end
-        end
-      end
-    end
-
     # Render template with given variables.
     def render_template(file, vars)
-      if store
-        template = templates[file] or raise "template #{file} not found"
-      else
-        template = ERB.new(File.read("#{path}/templates/#{file}"))
-      end
+      template = templates[file] or raise "template #{file} not found"
       Template.render(template, self, file, vars)
     end
 
@@ -105,27 +53,30 @@ module Kontrol
       end
     end
 
-    def if_modified_since(date = @last_mtime.httpdate)
+    def etag(string)
+      Digest::SHA1.hexdigest(string)
+    end
+
+    def if_modified_since(time)
+      date = time.respond_to?(:httpdate) ? time.httpdate : time
       response['Last-Modified'] = date
+      
       if request.env['HTTP_IF_MODIFIED_SINCE'] == date
+        response.status = 304
+      else
+        yield        
+      end
+    end
+    
+    def if_none_match(etag)
+      response['Etag'] = etag
+      if request.env['HTTP_IF_NONE_MATCH'] == etag
         response.status = 304
       else
         yield
       end
     end
-
-    def render_javascripts
-      if_modified_since do
-        javascript_files.map { |file| assets["javascripts/#{file.strip}.js"] }.join
-      end
-    end
-
-    def render_stylesheets
-      if_modified_since do
-        stylesheet_files.map { |file| assets["stylesheets/#{file.strip}.css"] }.join
-      end
-    end
-
+    
     def request
       Thread.current['request']
     end
@@ -157,35 +108,15 @@ module Kontrol
       MIME_TYPES[ext] || 'text/html'
     end
 
-    class << self
-
-      def map(&block)
-        @map = Builder.new(&block)
-      end
-
-      def get_map
-        @map
-      end
-      
-    end
-
-    def find_map
-      if store and store['map.rb']
-        store['map.rb']
-      else
-        self.class.get_map
-      end
-    end
-
     def call(env)
       Thread.current['request'] = Rack::Request.new(env)
       Thread.current['response'] = Rack::Response.new([], nil, { 'Content-Type' => '' })
 
-      check_reload if store
+      store.refresh!
       
       env['kontrol.app'] = self
 
-      status, header, body = find_map.call(env)
+      status, header, body = self.class.call(env)
 
       response.status = status if response.status.nil?
       response.header.merge!(header)

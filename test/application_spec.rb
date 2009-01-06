@@ -1,9 +1,10 @@
 require 'kontrol'
+require 'git_store'
 require 'rack/mock'
 
 describe Kontrol::Builder do
 
-  REPO = File.expand_path(File.dirname(__FILE__) + '/test_repo')
+  REPO = File.expand_path(File.dirname(__FILE__) + '/repo')
 
   before do
     FileUtils.rm_rf REPO
@@ -11,7 +12,8 @@ describe Kontrol::Builder do
     Dir.chdir REPO
     `git init`
 
-    @app = Kontrol::Application.new
+    @class = Class.new(Kontrol::Application)
+    @app = @class.new(REPO)
     @request = Rack::MockRequest.new(@app)
   end
 
@@ -32,7 +34,7 @@ describe Kontrol::Builder do
   end
   
   def map(&block)
-    @app.map(&block)
+    @class.map(&block)
   end
   
   def file(file, data)
@@ -57,6 +59,15 @@ describe Kontrol::Builder do
     put("/two").body.should == 'four'
   end
 
+  it "should redirect" do
+    map do
+      get '/' do redirect 'x' end
+    end
+
+    get('/')['Location'].should == 'x'
+    get('/').status.should == 301
+  end
+
   it "should reload after a commit" do
     file 'file', 'file'
 
@@ -74,24 +85,24 @@ describe Kontrol::Builder do
   end
 
   it "should serve assets" do
-    file 'config/assets.yml', '{ javascript_files: [index], stylesheet_files: [styles] }'
     file 'assets/javascripts/index.js', 'index'
     file 'assets/stylesheets/styles.css', 'styles'
     file 'assets/file', 'file'
     
     map do
       get '/assets/javascripts\.js' do
-        render_javascripts
+        scripts = store['assets/javascripts'].to_a.join
+        if_none_match(etag(scripts)) { scripts }
       end
 
       get '/assets/stylesheets\.css' do
-        render_stylesheets
+        styles = store['assets/stylesheets'].to_a.join
+        if_none_match(etag(styles)) { styles }
       end
 
       get '/assets/(.*)' do |path|
-        if_modified_since do
-          assets[path]
-        end
+        file = store['assets'][path]
+        if_none_match(etag(file)) { file }
       end
     end
 
@@ -101,9 +112,9 @@ describe Kontrol::Builder do
     get("/assets/stylesheets.css")['Content-Type'].should == 'text/css'
     
     get("/assets/file").body.should == 'file'
-    last_mod = get("/assets/file")['Last-Modified']
+    etag = get("/assets/file")['Etag']
     
-    get("/assets/file", 'HTTP_IF_MODIFIED_SINCE' => last_mod).status.should == 304
+    get("/assets/file", 'HTTP_IF_NONE_MATCH' => etag).status.should == 304
   end
 
   it "should render templates" do

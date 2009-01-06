@@ -29,15 +29,14 @@ module Kontrol
     def call(env)
       path = env["PATH_INFO"].to_s.squeeze("/")      
 
-      for pattern, app, options in @routing
-        match = path.match(/^#{pattern}/)
-        if match and options_match(env, options)
+      @routing.each do |pattern, app, options|        
+        if (match = path.match(/^#{pattern}/)) && options_match(env, options)
           env = env.dup
           (env['kontrol.args'] ||= []).concat(match.to_a[1..-1])
           if match[0] == pattern
             env["SCRIPT_NAME"] += match[0]
             env["PATH_INFO"] = path[match[0].size..-1]
-          end
+          end          
           return app.call(env)
         end
       end
