@@ -121,6 +121,7 @@ module Kontrol
       response.status = status if response.status.nil?
       response.header.merge!(header)
       response.body = body if response.body.empty?
+      response['Content-Length'] = response.body.size
       response['Content-Type'] = guess_content_type if response['Content-Type'].empty?
 
       response.finish
