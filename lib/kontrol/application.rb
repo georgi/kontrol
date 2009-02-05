@@ -18,8 +18,8 @@ module Kontrol
 
     attr_reader :path, :store
 
-    def initialize(path)
-      @path = path
+    def initialize(path = '.')
+      @path = File.expand_path(path)
       
       if File.directory?(File.join(path, '.git')) && ENV['RACK_ENV'] == 'production'
         @store = GitStore.new(path)
@@ -121,7 +121,7 @@ module Kontrol
       response.status = status if response.status.nil?
       response.header.merge!(header)
       response.body = body if response.body.empty?
-      response['Content-Length'] = response.body.size.to_s if response.status == 200
+      response['Content-Length'] = response.body.size.to_s
       response['Content-Type'] = guess_content_type if response['Content-Type'].empty?
 
       response.finish
