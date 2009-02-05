@@ -1,6 +1,6 @@
 Gem::Specification.new do |s|
   s.name = 'kontrol'
-  s.version = '0.1.3'
+  s.version = '0.1.4'
   s.date = '2008-12-17'
   s.summary = 'a micro web framework'
   s.author = 'Matthias Georgi'
