@@ -4,13 +4,15 @@ require 'rack/mock'
 
 describe Kontrol::Builder do
 
-  REPO = File.expand_path(File.dirname(__FILE__) + '/repo')
+  REPO = File.exist?('/tmp') ? '/tmp/test' : File.expand_path(File.dirname(__FILE__) + '/repo')
 
   before do
     FileUtils.rm_rf REPO
     Dir.mkdir REPO
     Dir.chdir REPO
     `git init`
+
+    ENV['RACK_ENV'] = 'production'
 
     @class = Class.new(Kontrol::Application)
     @app = @class.new(REPO)
