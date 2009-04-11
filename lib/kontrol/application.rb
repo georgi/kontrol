@@ -27,7 +27,7 @@ module Kontrol
     end
 
     def load_template(file)
-      ERB.new(File.read(file)) or raise "template #{file} not found"
+      ERB.new(File.read("templates/#{file}"))
     end
     
     # Render template with given variables.
