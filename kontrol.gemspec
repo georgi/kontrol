@@ -18,6 +18,7 @@ lib/kontrol.rb
 lib/kontrol/application.rb
 lib/kontrol/builder.rb
 lib/kontrol/helpers.rb
+lib/kontrol/mime_types.rb
 lib/kontrol/router.rb
 lib/kontrol/template.rb
 test/application_spec.rb
