@@ -27,7 +27,7 @@ module Kontrol
     end
 
     def load_template(file)
-      ERB.new(File.read("templates/#{file}"))
+      ERB.new(File.read("#{path}/templates/#{file}"))
     end
     
     # Render template with given variables.
@@ -118,7 +118,7 @@ module Kontrol
       response.header.merge!(header)
       response.body = body if response.body.empty?
       
-      if response.status == 200
+      if response.status != 304
         response.body ||= ''
         response['Content-Length'] = response.body.size.to_s
       end
