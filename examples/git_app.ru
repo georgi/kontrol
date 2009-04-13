@@ -1,5 +1,6 @@
 require 'kontrol'
 require 'bluecloth'
+require 'git_store'
 
 class GitApp < Kontrol::Application
 

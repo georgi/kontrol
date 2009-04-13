@@ -158,6 +158,10 @@ We create a Markdown file name `index.md`:
 We have now a simple page, which should be rendered as response. We
 create a simple app in a file `git_app.ru`:
 
+    require 'kontrol'
+    require 'bluecloth'
+    require 'git_store'
+
     class GitApp < Kontrol::Application
      
       def initialize(path)
@@ -171,6 +175,9 @@ create a simple app in a file `git_app.ru`:
         end
       end
     end
+
+    run GitApp.new
+
 
 Add all the page to your git repository:
 
