@@ -29,16 +29,18 @@ module Kontrol
     end
 
     # Render named template and insert into layout with given variables.
-    def render(name, vars = {})
-      content = render_template(name, vars)
-      layout = vars[:layout] || "layout.rhtml"
+    def render(name, options = {})
+      content = render_template(name, options)
+      layout = options.delete(:layout)
       
       if name[0, 1] == '_'
         return content
+        
       elsif layout == false
         response.body = content
       else
-        response.body = render_template(layout, vars.merge(:content => content))
+        options.merge!(:content => content)
+        response.body = render_template(layout || "layout.rhtml", options)
       end
 
       response['Content-Length'] = response.body.size.to_s

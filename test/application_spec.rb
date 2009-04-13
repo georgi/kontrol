@@ -7,6 +7,14 @@ describe Kontrol::Application do
     @class = Class.new(Kontrol::Application)
     @app = @class.new
     @request = Rack::MockRequest.new(@app)
+    
+    def @app.load_template(file)
+      if file == "layout.rhtml"
+        ERB.new '<html><%= @content %></html>'
+      else
+        ERB.new '<p><%= @body %></p>'
+      end
+    end
   end
 
   def get(*args)
@@ -90,15 +98,17 @@ describe Kontrol::Application do
     get('/')['Content-Length'].should == '5'
   end
 
-  it "should render templates" do
-    def @app.load_template(file)
-      if file == "layout.rhtml"
-        ERB.new '<html><%= @content %></html>'
-      else
-        ERB.new '<p><%= @body %></p>'
+  it "should render no layout" do
+    map do
+      index '/' do
+        render 'index.rhtml', :body => 'BODY', :layout => false
       end
     end
 
+    get('/').body.should == '<p>BODY</p>'
+  end
+
+  it "should render templates" do
     map do
       index '/' do
         render 'index.rhtml', :body => 'BODY'
