@@ -1,135 +1,111 @@
 require 'kontrol'
-require 'git_store'
 require 'rack/mock'
 
-describe Kontrol::Builder do
-
-  REPO = File.exist?('/tmp') ? '/tmp/test' : File.expand_path(File.dirname(__FILE__) + '/repo')
+describe Kontrol::Application do
 
   before do
-    FileUtils.rm_rf REPO
-    Dir.mkdir REPO
-    Dir.chdir REPO
-    `git init`
-
-    ENV['RACK_ENV'] = 'production'
-
     @class = Class.new(Kontrol::Application)
-    @app = @class.new(REPO)
+    @app = @class.new
     @request = Rack::MockRequest.new(@app)
   end
 
   def get(*args)
     @request.get(*args)
   end
-
-  def post(*args)
-    @request.post(*args)
-  end
-
-  def delete(*args)
-    @request.delete(*args)
-  end
-
-  def put(*args)
-    @request.put(*args)
-  end
   
   def map(&block)
     @class.map(&block)
   end
-  
-  def file(file, data)
-    FileUtils.mkpath(File.dirname(file))
-    open(file, 'w') { |io| io << data }
-    `git add #{file}`
-    `git commit -m 'spec'`
-    File.unlink(file)    
-  end
 
-  it "should understand all verbs" do
-    map do
-      get '/one' do 'one' end
-      post '/one' do 'two' end
-      delete '/one' do 'three' end
-      put '/two' do 'four' end
+  it "should do simple pattern matching" do
+    map do      
+      one '/one' do
+        response.body = 'one'
+      end
+      
+      two '/two' do
+        response.body = 'two'
+      end
     end
 
     get("/one").body.should == 'one'
-    post("/one").body.should == 'two'
-    delete("/one").body.should == 'three'
-    put("/two").body.should == 'four'
+    get("/two").body.should == 'two'
+  end
+
+  it "should have a router" do
+    map do
+      root '/'
+    end
+
+    @class.router.should_not be_nil
+  end
+  
+  it "should generate paths" do
+    map do
+      root '/'
+      about '/about'
+      page '/page/(.*)'
+    end
+
+    @app.root_path.should == '/'
+    @app.about_path.should == '/about'
+    @app.page_path('world').should == '/page/world'
   end
 
   it "should redirect" do
     map do
-      get '/' do redirect 'x' end
+      root '/' do
+        redirect 'x'
+      end
     end
 
     get('/')['Location'].should == 'x'
     get('/').status.should == 301
   end
 
-  it "should reload after a commit" do
-    file 'file', 'file'
-
+  it "should respond with not modified" do
     map do
-      get '/(.*)' do |path|
-        store[path]
+      assets '/assets/(.*)' do
+        script = "script"
+        if_none_match(etag(script)) do
+          text script
+        end
       end
     end
 
-    get("/file").body.should == 'file'
-
-    file 'file', 'changed'
-
-    get("/file").body.should == 'changed'
-  end
-
-  it "should serve assets" do
-    file 'assets/javascripts/index.js', 'index'
-    file 'assets/stylesheets/styles.css', 'styles'
-    file 'assets/file', 'file'
+    get("/assets/test.js").body.should == 'script'
     
-    map do
-      get '/assets/javascripts\.js' do
-        scripts = store['assets/javascripts'].to_a.join
-        if_none_match(etag(scripts)) { scripts }
-      end
-
-      get '/assets/stylesheets\.css' do
-        styles = store['assets/stylesheets'].to_a.join
-        if_none_match(etag(styles)) { styles }
-      end
-
-      get '/assets/(.*)' do |path|
-        file = store['assets'][path]
-        if_none_match(etag(file)) { file }
-      end
-    end
-
-    get("/assets/javascripts.js").body.should == 'index'
-    get("/assets/javascripts.js")['Content-Type'].should == 'text/javascript'
-    get("/assets/stylesheets.css").body.should == 'styles'
-    get("/assets/stylesheets.css")['Content-Type'].should == 'text/css'
-    
-    get("/assets/file").body.should == 'file'
-    etag = get("/assets/file")['Etag']
-    
+    etag = get("/assets/file")['Etag']    
     get("/assets/file", 'HTTP_IF_NONE_MATCH' => etag).status.should == 304
   end
 
-  it "should render templates" do
-    file 'templates/layout.rhtml', '<%= @content %>'
-    file 'templates/index.rhtml', '<%= @body %>'
-    
+  it "should render text" do
     map do
-      get '/' do
+      index '/' do
+        text "Hello"
+      end
+    end
+
+    get('/').body.should == 'Hello'
+    get('/')['Content-Length'].should == '5'
+  end
+
+  it "should render templates" do
+    def @app.load_template(file)
+      if file == "layout.rhtml"
+        ERB.new '<html><%= @content %></html>'
+      else
+        ERB.new '<p><%= @body %></p>'
+      end
+    end
+
+    map do
+      index '/' do
         render 'index.rhtml', :body => 'BODY'
       end
     end
 
-    get('/').body.should == 'BODY'     
+    get('/').body.should == '<html><p>BODY</p></html>'
   end
   
 end

@@ -2,7 +2,7 @@ require 'kontrol'
 
 class Templates < Kontrol::Application
   map do
-    get '/(.*)' do |name|
+    page '/(.*)' do |name|
       render "page.rhtml", :title => name.capitalize, :body => "This is the body!"
     end
   end

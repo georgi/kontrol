@@ -6,8 +6,12 @@ module Kontrol
     include Helpers
 
     # Initialize this template with an ERB instance.
-    def initialize(app)
+    def initialize(app, vars)
       @__app__ = app
+      
+      vars.each do |k, v|
+        instance_variable_set "@#{k}", v
+      end
     end
 
     def __binding__
@@ -15,19 +19,9 @@ module Kontrol
     end
 
     def self.render(erb, app, file, vars)
-      template = Template.new(app)
-
-      for name, value in vars
-        template.send :instance_variable_set, "@#{name}", value
-      end
-
-      result = erb.result(template.__binding__)
-
-      for name in template.instance_variables
-        vars[name[1..-1]] = template.send(:instance_variable_get, name) unless name == '@__app__'
-      end
-
-      return result
+      template = Template.new(app, vars)
+      
+      return erb.result(template.__binding__)
 
     rescue => e
       e.backtrace.each do |s|

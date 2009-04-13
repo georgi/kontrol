@@ -1,47 +1,33 @@
 module Kontrol
 
   class Router
+    
+    def initialize(&block)
+      @routes = []
+      @map = {}
 
-    def initialize
-      @routing = []      
+      instance_eval(&block) if block
     end
 
-    def map(pattern, block, options = {})
-      @routing << [pattern, block, options]
+    def __find__(name)
+      @map[name.to_sym]
     end
 
-    OPTION_MAPPING = {
-      :method => 'REQUEST_METHOD',
-      :port => 'SERVER_PORT',
-      :host => 'HTTP_HOST',
-      :accept => 'HTTP_ACCEPT',
-      :query => 'QUERY_STRING',
-      :content_type => 'CONTENT_TYPE'      
-    }
-
-    def options_match(env, options)      
-      options.all? do |name, pattern| 
-        value = env[OPTION_MAPPING[name] || name]
-        value and pattern.match(value)
-      end
-    end
-
-    def call(env)
-      path = env["PATH_INFO"].to_s.squeeze("/")      
-
-      @routing.each do |pattern, app, options|        
-        if (match = path.match(/^#{pattern}/)) && options_match(env, options)
-          env = env.dup
-          (env['kontrol.args'] ||= []).concat(match.to_a[1..-1])
-          if match[0] == pattern
-            env["SCRIPT_NAME"] += match[0]
-            env["PATH_INFO"] = path[match[0].size..-1]
-          end          
-          return app.call(env)
+    def __recognize__(request)
+      @routes.each do |route|
+        if match = route.recognize(request)
+          return route, match
         end
       end
+      
+      return nil
+    end
 
-      [404, {"Content-Type" => "text/plain"}, ["Not Found: #{env['REQUEST_URI']}"]]
+    def method_missing(name, pattern, *args, &block)
+      route = Route.new(name, pattern, args.first, block)
+      
+      @routes << route
+      @map[name] = route
     end
 
   end

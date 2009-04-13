@@ -7,10 +7,10 @@ class GitApp < Kontrol::Application
     super
     @store = GitStore.new(path)
   end
-
+  
   map do
-    get '/(.*)' do |name|
-      BlueCloth.new(@store['pages', name + '.md']).to_html
+    page '/(.*)' do |name|
+      text BlueCloth.new(@store[name + '.md']).to_html
     end
   end
 end
