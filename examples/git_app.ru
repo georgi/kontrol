@@ -11,7 +11,7 @@ class GitApp < Kontrol::Application
   
   map do
     page '/(.*)' do |name|
-      text BlueCloth.new(@store[name + '.md']).to_html
+      text BlueCloth.new(@store[name]).to_html
     end
   end
 end

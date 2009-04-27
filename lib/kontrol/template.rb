@@ -13,7 +13,7 @@ module Kontrol
         instance_variable_set "@#{k}", v
       end
     end
-
+   
     def __binding__
       binding
     end

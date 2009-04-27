@@ -20,16 +20,18 @@ module Kontrol
     end
 
     def load_template(file)
-      ERB.new(File.read("#{path}/templates/#{file}"))
+      ERB.new(File.read("#{self.path}/templates/#{file}"))
     end
     
     # Render template with given variables.
     def render_template(file, vars)
-      Template.render(load_template(file), self, file, vars)
+      template = load_template(file) or raise "not found: #{path}"
+      Template.render(template, self, path, vars)
     end
 
     # Render named template and insert into layout with given variables.
     def render(name, options = {})
+      options = options.merge(:request => request, :params => params)
       content = render_template(name, options)
       layout = options.delete(:layout)
       
@@ -125,7 +127,11 @@ module Kontrol
 
     def method_missing(name, *args, &block)
       if match = name.to_s.match(/^(.*)_path$/)
-        router.__find__(match[1]).generate(*args)
+        if route = router.__find__(match[1])
+          route.generate(*args)
+        else
+          super
+        end
       else
         super
       end
