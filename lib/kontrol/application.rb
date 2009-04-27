@@ -26,7 +26,7 @@ module Kontrol
     # Render template with given variables.
     def render_template(file, vars)
       template = load_template(file) or raise "not found: #{path}"
-      Template.render(template, self, path, vars)
+      Template.render(template, self, "#{self.path}/templates/#{file}", vars)
     end
 
     # Render named template and insert into layout with given variables.
@@ -81,6 +81,10 @@ module Kontrol
     def get?    ; request.get?                end
     def put?    ; request.put?                end
     def delete? ; request.delete?             end
+    def post    ; request.post? and yield     end
+    def get     ; request.get? and yield      end
+    def put     ; request.put? and yield      end
+    def delete  ; request.delete? and yield   end
 
     def text(s)
       response.body = s
@@ -123,6 +127,14 @@ module Kontrol
 
     def inspect
       "#<#{self.class.name} @path=#{path}>"
+    end
+
+    def respond_to?(name)
+      if match = name.to_s.match(/^(.*)_path$/)
+        router.__find__(match[1])
+      else
+        super
+      end
     end
 
     def method_missing(name, *args, &block)

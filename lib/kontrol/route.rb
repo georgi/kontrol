@@ -20,7 +20,9 @@ module Kontrol
     end
 
     def generate(*args)
-      @format % args
+      @format % args.map { |arg|
+        arg.respond_to?(:to_param) ? arg.to_param : arg.to_s
+      }
     end
     
   end
