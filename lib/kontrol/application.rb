@@ -20,13 +20,13 @@ module Kontrol
     end
 
     def load_template(file)
-      ERB.new(File.read("#{self.path}/templates/#{file}"))
+      @templates[file] ||= Template.new(self, "#{self.path}/templates/#{file}")
     end
     
     # Render template with given variables.
-    def render_template(file, vars)
-      template = load_template(file) or raise "not found: #{path}"
-      Template.render(template, self, "#{self.path}/templates/#{file}", vars)
+    def render_template(file, variables)
+      template = load_template(file) or raise "template not found: #{path}"
+      template.render(variables)
     end
 
     # Render named template and insert into layout with given variables.
