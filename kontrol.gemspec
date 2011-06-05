@@ -1,6 +1,6 @@
 Gem::Specification.new do |s|
   s.name = 'kontrol'
-  s.version = '0.3'
+  s.version = '0.4'
   s.summary = 'a micro framework'
   s.author = 'Matthias Georgi'
   s.email = 'matti.georgi@gmail.com'

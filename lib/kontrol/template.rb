@@ -13,8 +13,8 @@ module Kontrol
     end
 
     def method_missing(id, *args, &block)
-      if @__app__.respond_to?(id)
-        @__app__.send(id, *args, &block)
+      if @application.respond_to?(id)
+        @application.send(id, *args, &block)
       else      
         super
       end
@@ -25,6 +25,8 @@ module Kontrol
   # are accessible as instance variables.
   class Template
     include Helpers
+
+    attr_reader :file
 
     def initialize(app, file)
       @app = app
@@ -45,7 +47,7 @@ module Kontrol
     def render(variables)
       load if ENV['RACK_ENV'] != 'production' and changed?
       
-      @erb.result(View.new(@app, variables).__binding__)
+      @erb.result(View.new(variables.merge(:application => @app)).__binding__)
 
     rescue => e
       e.backtrace.each do |s|
